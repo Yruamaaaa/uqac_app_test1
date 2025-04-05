@@ -4,7 +4,6 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Loading from '@/components/Loading'
-import Calendar from '@/components/Calendar'
 
 const fugaz = Fugaz_One({ subsets: ["latin"], weight: ['400'] })
 
@@ -23,15 +22,15 @@ export default function Home() {
     }
 
     return (
-        <main className="min-h-screen flex flex-col items-center p-4 max-w-5xl mx-auto w-full">
-            <div className="text-center space-y-4 mb-8 pt-16 md:pt-24">
-                <h1 className={`text-4xl md:text-6xl ${fugaz.className}`}>
-                    SHUK
+        <main className="min-h-screen flex flex-col items-center justify-center p-4">
+            <div className="text-center space-y-6">
+                <h1 className={`text-6xl md:text-8xl ${fugaz.className}`}>
+                    Shuk
                 </h1>
-                <p className="text-base md:text-lg text-gray-600">
-                    Helps you find activities
+                <p className="text-xl md:text-2xl text-gray-600">
+                    helps you find activities
                 </p>
-                <div className="mt-4 max-w-xs mx-auto">
+                <div className="mt-8">
                     {currentUser ? (
                         <Button
                             text="Go to Dashboard"
@@ -46,10 +45,6 @@ export default function Home() {
                         />
                     )}
                 </div>
-            </div>
-
-            <div className="w-full bg-white rounded-xl shadow-sm p-4 transform scale-90">
-                <Calendar defaultView="week" />
             </div>
         </main>
     )

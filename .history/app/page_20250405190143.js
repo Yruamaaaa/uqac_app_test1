@@ -26,10 +26,10 @@ export default function Home() {
         <main className="min-h-screen flex flex-col items-center p-4 max-w-5xl mx-auto w-full">
             <div className="text-center space-y-4 mb-8 pt-16 md:pt-24">
                 <h1 className={`text-4xl md:text-6xl ${fugaz.className}`}>
-                    SHUK
+                    Shuk
                 </h1>
                 <p className="text-base md:text-lg text-gray-600">
-                    Helps you find activities
+                    helps you find activities
                 </p>
                 <div className="mt-4 max-w-xs mx-auto">
                     {currentUser ? (

@@ -2,17 +2,11 @@
 import { Fugaz_One } from 'next/font/google'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import Button from '@/components/Button'
+import WeeklyCalendar from '@/components/WeeklyCalendar'
 import Loading from '@/components/Loading'
-import Calendar from '@/components/Calendar'
 
 const fugaz = Fugaz_One({ subsets: ["latin"], weight: ['400'] })
-
-// Dynamically import Button to avoid hydration issues
-const Button = dynamic(() => import('@/components/Button'), {
-    ssr: false,
-    loading: () => <Loading />
-})
 
 export default function Home() {
     const { currentUser, loading } = useAuth()
@@ -23,15 +17,15 @@ export default function Home() {
     }
 
     return (
-        <main className="min-h-screen flex flex-col items-center p-4 max-w-5xl mx-auto w-full">
-            <div className="text-center space-y-4 mb-8 pt-16 md:pt-24">
-                <h1 className={`text-4xl md:text-6xl ${fugaz.className}`}>
-                    SHUK
+        <main className="min-h-screen flex flex-col items-center p-4 space-y-8">
+            <div className="text-center space-y-6">
+                <h1 className={`text-6xl md:text-8xl ${fugaz.className}`}>
+                    Shuk
                 </h1>
-                <p className="text-base md:text-lg text-gray-600">
-                    Helps you find activities
+                <p className="text-xl md:text-2xl text-gray-600">
+                    helps you find activities
                 </p>
-                <div className="mt-4 max-w-xs mx-auto">
+                <div className="mt-8">
                     {currentUser ? (
                         <Button
                             text="Go to Dashboard"
@@ -48,8 +42,8 @@ export default function Home() {
                 </div>
             </div>
 
-            <div className="w-full bg-white rounded-xl shadow-sm p-4 transform scale-90">
-                <Calendar defaultView="week" />
+            <div className="w-full max-w-6xl">
+                <WeeklyCalendar />
             </div>
         </main>
     )

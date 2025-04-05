@@ -42,7 +42,8 @@ export default function Calendar() {
                 
                 const eventsData = querySnapshot.docs.map(doc => ({
                     id: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
+                    date: doc.data().date?.toDate() // Convert Firestore Timestamp to Date
                 }))
                 
                 setEvents(eventsData)
@@ -54,7 +55,7 @@ export default function Calendar() {
         }
 
         fetchEvents()
-    }, [currentDate]) // Refetch when date changes
+    }, [currentDate])
 
     // Navigate between weeks/months
     const navigateDate = (direction) => {
@@ -82,12 +83,14 @@ export default function Calendar() {
         return `${hour}:00`
     }
 
-    // Get events for a specific day and hour
-    const getEvents = (dayIndex, hour) => {
-        return events.filter(event => 
-            event.day === dayIndex + 1 && 
-            event.startHour === hour
-        )
+    // Get events for a specific date and hour
+    const getEvents = (date, hour) => {
+        return events.filter(event => {
+            if (!event.date) return false
+            const eventDate = new Date(event.date)
+            return eventDate.toDateString() === date.toDateString() && 
+                   event.startHour === hour
+        })
     }
 
     // Calculate event height based on duration
@@ -123,7 +126,7 @@ export default function Calendar() {
                             <i className="fa-solid fa-plus"></i>
                         </a>
                     )}
-                    <button 
+                    <button
                         onClick={() => setIsMonthView(!isMonthView)}
                         className="text-gray-600 hover:text-gray-800 transition-colors"
                         title={isMonthView ? "Switch to week view" : "Switch to month view"}
@@ -169,7 +172,7 @@ export default function Calendar() {
                                 <div className="grid grid-cols-8 gap-1 mb-2 border-b pb-2 sticky top-0 bg-white z-10">
                                     <div className="w-16"></div> {/* Spacer for hours column */}
                                     {dates.map((date, i) => (
-                                        <div 
+                                        <div
                                             key={i} 
                                             className={`text-center text-sm ${isToday(date) ? 'font-bold' : ''}`}
                                         >
@@ -181,7 +184,7 @@ export default function Calendar() {
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 {/* Time slots */}
                                 <div className="relative">
                                     {hours.map(hour => (
@@ -191,16 +194,16 @@ export default function Calendar() {
                                                 {formatHour(hour)}
                                             </div>
                                             {/* Days columns */}
-                                            {dates.map((_, dayIndex) => (
-                                                <div 
-                                                    key={dayIndex} 
+                                            {dates.map((date, dateIndex) => (
+                                                <div
+                                                    key={dateIndex} 
                                                     className="border-l h-12 hover:bg-gray-50 transition-colors cursor-pointer relative"
                                                 >
-                                                    {getEvents(dayIndex, hour).map(event => (
+                                                    {getEvents(date, hour).map((event, eventIndex) => (
                                                         <div
-                                                            key={event.id}
+                                                            key={eventIndex}
                                                             className={`absolute w-[calc(100%-8px)] left-1 p-1 rounded border ${getEventColor(event.sportType)}`}
-                                                            style={{ 
+                                                            style={{
                                                                 height: getEventHeight(event.duration),
                                                                 zIndex: 10
                                                             }}
@@ -229,14 +232,14 @@ export default function Calendar() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Event Details Modal */}
                 {selectedEvent && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className="text-xl font-semibold">{selectedEvent.title}</h3>
-                                <button 
+                                <button
                                     onClick={() => setSelectedEvent(null)}
                                     className="text-gray-500 hover:text-gray-700"
                                 >
@@ -254,7 +257,7 @@ export default function Calendar() {
                                     />
                                 </div>
                             )}
-                            
+
                             <div className="space-y-3">
                                 <div>
                                     <p className="text-sm text-gray-500">Description</p>
@@ -288,7 +291,7 @@ export default function Calendar() {
                                     <p className="text-gray-800">{selectedEvent.authorName}</p>
                                 </div>
                             </div>
-                            
+
                             <div className="mt-6 flex justify-end">
                                 <button
                                     onClick={() => setSelectedEvent(null)}
