@@ -24,8 +24,7 @@ export default function CreateEventForm() {
         maxParticipants: 10,
         location: '',
         sportType: 'other',
-        imageUrl: null,
-        acceptedTerms: false
+        imageUrl: null
     })
 
     const handleImageChange = async (e) => {
@@ -334,29 +333,10 @@ export default function CreateEventForm() {
                     </select>
                 </div>
 
-                {/* Terms and Conditions */}
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        name="acceptedTerms"
-                        checked={formData.acceptedTerms}
-                        onChange={(e) => setFormData({...formData, acceptedTerms: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-600">
-                        En cliquant sur ce bouton, vous acceptez nos conditions d'utilisation
-                    </label>
-                </div>
-
-                {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || !formData.acceptedTerms}
-                    className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                        formData.acceptedTerms 
-                        ? 'bg-black text-white hover:bg-gray-800' 
-                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    }`}
+                    disabled={loading}
+                    className="w-full bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? 'Création en cours...' : 'Créer l\'événement'}
                 </button>

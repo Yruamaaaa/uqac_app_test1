@@ -114,22 +114,33 @@ export default function Calendar() {
         <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
                 <h2 className="font-medium">Calendrier des évènements</h2>
-                <button 
-                    onClick={() => setIsMonthView(!isMonthView)}
-                    className="text-gray-600 hover:text-gray-800 transition-colors"
-                    title={isMonthView ? "Switch to week view" : "Switch to month view"}
-                >
-                    <i className={`fa-solid ${isMonthView ? 'fa-calendar-days' : 'fa-calendar'}`}></i>
-                </button>
+                <div className="flex items-center gap-2">
+                    {currentUser && (
+                        <a 
+                            href="/events/create"
+                            className="text-gray-600 hover:text-gray-800 transition-colors"
+                            title="Créer un nouvel événement"
+                        >
+                            <i className="fa-solid fa-plus"></i>
+                        </a>
+                    )}
+                    <button 
+                        onClick={() => setIsMonthView(!isMonthView)}
+                        className="text-gray-600 hover:text-gray-800 transition-colors"
+                        title={isMonthView ? "Switch to week view" : "Switch to month view"}
+                    >
+                        <i className={`fa-solid ${isMonthView ? 'fa-calendar-days' : 'fa-calendar'}`}></i>
+                    </button>
+                </div>
             </div>
             <div className="bg-white rounded-xl p-4 shadow-sm overflow-hidden">
                 {isMonthView ? (
                     // Month view
                     <>
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="flex justify-between mb-4">
                             <button 
                                 onClick={() => navigateDate(-1)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors px-2"
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <i className="fa-solid fa-chevron-left"></i>
                             </button>
@@ -141,7 +152,7 @@ export default function Calendar() {
                             </span>
                             <button 
                                 onClick={() => navigateDate(1)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors px-2"
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <i className="fa-solid fa-chevron-right"></i>
                             </button>
@@ -172,10 +183,10 @@ export default function Calendar() {
                 ) : (
                     // Week view
                     <div className="relative max-h-[calc(100vh-16rem)] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
+                        <div className="flex justify-between mb-4">
                             <button 
                                 onClick={() => navigateDate(-1)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors px-2"
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <i className="fa-solid fa-chevron-left"></i>
                             </button>
@@ -187,7 +198,7 @@ export default function Calendar() {
                             </span>
                             <button 
                                 onClick={() => navigateDate(1)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors px-2"
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <i className="fa-solid fa-chevron-right"></i>
                             </button>

@@ -114,13 +114,24 @@ export default function Calendar() {
         <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
                 <h2 className="font-medium">Calendrier des évènements</h2>
-                <button 
-                    onClick={() => setIsMonthView(!isMonthView)}
-                    className="text-gray-600 hover:text-gray-800 transition-colors"
-                    title={isMonthView ? "Switch to week view" : "Switch to month view"}
-                >
-                    <i className={`fa-solid ${isMonthView ? 'fa-calendar-days' : 'fa-calendar'}`}></i>
-                </button>
+                <div className="flex items-center gap-2">
+                    {currentUser && (
+                        <a 
+                            href="/events/create"
+                            className="text-gray-600 hover:text-gray-800 transition-colors"
+                            title="Créer un nouvel événement"
+                        >
+                            <i className="fa-solid fa-plus"></i>
+                        </a>
+                    )}
+                    <button 
+                        onClick={() => setIsMonthView(!isMonthView)}
+                        className="text-gray-600 hover:text-gray-800 transition-colors"
+                        title={isMonthView ? "Switch to week view" : "Switch to month view"}
+                    >
+                        <i className={`fa-solid ${isMonthView ? 'fa-calendar-days' : 'fa-calendar'}`}></i>
+                    </button>
+                </div>
             </div>
             <div className="bg-white rounded-xl p-4 shadow-sm overflow-hidden">
                 {isMonthView ? (
