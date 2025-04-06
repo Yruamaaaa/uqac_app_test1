@@ -27,7 +27,7 @@ export default function Login() {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = (event) => {
-                const img = new window.Image();  // Use window.Image to avoid conflict with Next.js Image
+                const img = new Image();
                 img.src = event.target.result;
                 img.onload = () => {
                     const canvas = document.createElement('canvas');

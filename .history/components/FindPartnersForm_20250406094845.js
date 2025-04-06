@@ -4,14 +4,12 @@ import { useAuth } from '@/context/AuthContext'
 import { db } from '@/firebase'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
-import { addXP, XP_REWARD_PARTNER } from '@/utils/gamification'
 
 export default function FindPartnersForm() {
     const { currentUser, userDataObj } = useAuth()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [success, setSuccess] = useState('')
 
     const [formData, setFormData] = useState({
         activity: '',
@@ -58,26 +56,8 @@ export default function FindPartnersForm() {
             const docRef = await addDoc(collection(db, 'findpartners'), partnerRequest)
             console.log('Partner request created with ID:', docRef.id)
             
-            // Award XP for creating a partner request
-            await addXP(currentUser.uid, XP_REWARD_PARTNER)
-            
-            // Show success message
-            setSuccess('Demande de partenaire créée avec succès!')
-            
-            // Reset form
-            setFormData({
-                activity: '',
-                skillLevel: 'intermediate',
-                date: new Date().toISOString().split('T')[0],
-                timePreference: 'any',
-                location: '',
-                acceptedTerms: false
-            })
-
-            // Redirect after a short delay
-            setTimeout(() => {
-                router.push('/event-research')
-            }, 2000)
+            // Redirect to the event-research page
+            router.push('/event-research')
         } catch (err) {
             console.error('Error creating partner request:', err)
             setError(err.message)
@@ -106,12 +86,6 @@ export default function FindPartnersForm() {
             {error && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
                     {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4">
-                    {success}
                 </div>
             )}
 

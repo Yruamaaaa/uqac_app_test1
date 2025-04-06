@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { db } from '@/firebase'
-import { collection, query, where, getDocs, updateDoc, doc, arrayUnion, arrayRemove } from 'firebase/firestore'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import Image from 'next/image'
 import DashboardHeader from '@/components/DashboardHeader'
 import BottomNav from '@/components/BottomNav'
@@ -72,27 +72,6 @@ export default function EventResearch() {
             console.error('Error fetching events:', error)
         } finally {
             setLoading(false)
-        }
-    }
-
-    const handleParticipate = async (eventId, isParticipating) => {
-        if (!currentUser) return
-
-        try {
-            const eventRef = doc(db, 'events', eventId)
-            if (isParticipating) {
-                await updateDoc(eventRef, {
-                    participants: arrayRemove(currentUser.uid)
-                })
-            } else {
-                await updateDoc(eventRef, {
-                    participants: arrayUnion(currentUser.uid)
-                })
-            }
-            // Refresh events after participation change
-            fetchEvents()
-        } catch (error) {
-            console.error('Error updating participation:', error)
         }
     }
 
@@ -167,66 +146,50 @@ export default function EventResearch() {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {events.map(event => {
-                                    const isParticipating = event.participants?.includes(currentUser.uid)
-                                    const isAuthor = event.authorId === currentUser.uid
-                                    return (
-                                        <div key={event.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                                            {event.imageUrl && (
-                                                <div className="relative h-48 w-full">
-                                                    <Image
-                                                        src={event.imageUrl}
-                                                        alt={event.title}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
+                                {events.map(event => (
+                                    <div key={event.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                                        {event.imageUrl && (
+                                            <div className="relative h-48 w-full">
+                                                <Image
+                                                    src={event.imageUrl}
+                                                    alt={event.title}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="p-4">
+                                            <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
+                                            <p className="text-gray-600 mb-2">{event.description}</p>
+                                            <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
+                                                <div>
+                                                    <i className="fa-solid fa-location-dot mr-2"></i>
+                                                    {event.location}
                                                 </div>
-                                            )}
-                                            <div className="p-4">
-                                                <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
-                                                <p className="text-gray-600 mb-2">{event.description}</p>
-                                                <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
-                                                    <div>
-                                                        <i className="fa-solid fa-location-dot mr-2"></i>
-                                                        {event.location}
-                                                    </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-users mr-2"></i>
-                                                        {event.participants?.length || 0}/{event.maxParticipants}
-                                                    </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-clock mr-2"></i>
-                                                        {event.startHour}:00 - {event.startHour + event.duration}:00
-                                                    </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-calendar mr-2"></i>
-                                                        {new Date(event.date).toLocaleDateString('fr-FR')}
-                                                    </div>
+                                                <div>
+                                                    <i className="fa-solid fa-users mr-2"></i>
+                                                    {event.participants?.length || 0}/{event.maxParticipants}
                                                 </div>
-                                                <div className="mt-4 flex justify-between items-center">
-                                                    <span className="px-3 py-1 bg-gray-100 rounded-full text-sm capitalize">
-                                                        {event.sportType}
-                                                    </span>
-                                                    <span className="text-sm text-gray-500">
-                                                        Par {event.authorName}
-                                                    </span>
+                                                <div>
+                                                    <i className="fa-solid fa-clock mr-2"></i>
+                                                    {event.startHour}:00 - {event.startHour + event.duration}:00
                                                 </div>
-                                                {!isAuthor && (
-                                                    <button
-                                                        onClick={() => handleParticipate(event.id, isParticipating)}
-                                                        className={`w-full mt-4 py-2 rounded-lg font-medium transition-colors ${
-                                                            isParticipating
-                                                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                                : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                        }`}
-                                                    >
-                                                        {isParticipating ? 'Annuler ma participation' : 'Participer'}
-                                                    </button>
-                                                )}
+                                                <div>
+                                                    <i className="fa-solid fa-calendar mr-2"></i>
+                                                    {new Date(event.date).toLocaleDateString('fr-FR')}
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 flex justify-between items-center">
+                                                <span className="px-3 py-1 bg-gray-100 rounded-full text-sm capitalize">
+                                                    {event.sportType}
+                                                </span>
+                                                <span className="text-sm text-gray-500">
+                                                    Par {event.authorName}
+                                                </span>
                                             </div>
                                         </div>
-                                    )
-                                })}
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

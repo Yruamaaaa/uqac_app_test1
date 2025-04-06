@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 import { db, storage } from '@/firebase'
 import { doc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { calculateLevel, calculateXPProgress, XP_PER_LEVEL } from '@/utils/gamification'
 
 const fugaz = Fugaz_One({
     weight: '400',
@@ -171,16 +170,11 @@ export default function ProfileContent() {
                 {/* Level Bar */}
                 <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                        <span>Niveau {userDataObj?.level || 1}</span>
-                        <span>{userDataObj?.xp || 0}/{XP_PER_LEVEL} xp</span>
+                        <span>Niveau 2</span>
+                        <span>20/100 xp</span>
                     </div>
                     <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-black transition-all duration-500" 
-                            style={{ 
-                                width: `${((userDataObj?.xp || 0) % XP_PER_LEVEL) / XP_PER_LEVEL * 100}%` 
-                            }}
-                        ></div>
+                        <div className="h-full bg-black" style={{ width: '20%' }}></div>
                     </div>
                 </div>
 

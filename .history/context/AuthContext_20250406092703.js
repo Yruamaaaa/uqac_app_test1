@@ -56,8 +56,6 @@ export function AuthProvider({ children }) {
                 age: userData?.age || null,
                 hobby: userData?.hobby || '',
                 profileImage: profileImageUrl,
-                xp: 0,  // Initial XP
-                level: 1,  // Initial level
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             }
@@ -128,8 +126,6 @@ export function AuthProvider({ children }) {
                                 age: null,
                                 hobby: '',
                                 profileImage: null,
-                                xp: 0,  // Initial XP
-                                level: 1,  // Initial level
                                 createdAt: new Date().toISOString(),
                                 updatedAt: new Date().toISOString()
                             }
@@ -144,9 +140,7 @@ export function AuthProvider({ children }) {
                             name: '',
                             age: null,
                             hobby: '',
-                            profileImage: null,
-                            xp: 0,  // Initial XP
-                            level: 1,  // Initial level
+                            profileImage: null
                         })
                     }
                 }

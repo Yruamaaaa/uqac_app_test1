@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation'
 import { db, storage } from '@/firebase'
 import { doc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { calculateLevel, calculateXPProgress, XP_PER_LEVEL } from '@/utils/gamification'
 
 const fugaz = Fugaz_One({
     weight: '400',
@@ -18,60 +17,6 @@ export default function ProfileContent() {
     const { userDataObj, logout, currentUser, setUserDataObj } = useAuth()
     const router = useRouter()
     const [isUpdating, setIsUpdating] = useState(false)
-
-    const optimizeImage = async (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new window.Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-
-                    // Calculate new dimensions (max 800px width/height)
-                    let width = img.width;
-                    let height = img.height;
-                    const maxSize = 800;
-                    
-                    if (width > height && width > maxSize) {
-                        height = Math.round((height * maxSize) / width);
-                        width = maxSize;
-                    } else if (height > maxSize) {
-                        width = Math.round((width * maxSize) / height);
-                        height = maxSize;
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    // Draw and compress image
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Convert to blob with compression
-                    canvas.toBlob(
-                        (blob) => {
-                            if (blob) {
-                                // Create a new file from the blob
-                                const optimizedFile = new File([blob], file.name, {
-                                    type: 'image/jpeg',
-                                    lastModified: Date.now()
-                                });
-                                resolve(optimizedFile);
-                            } else {
-                                reject(new Error('Failed to optimize image'));
-                            }
-                        },
-                        'image/jpeg',
-                        0.7 // Compression quality (0.7 = 70% quality)
-                    );
-                };
-                img.onerror = reject;
-            };
-            reader.onerror = reject;
-        });
-    };
 
     const handleLogout = async () => {
         try {
@@ -89,9 +34,6 @@ export default function ProfileContent() {
         try {
             setIsUpdating(true)
             
-            // Optimize the image before uploading
-            const optimizedFile = await optimizeImage(file)
-            
             // Delete old image if it exists
             if (userDataObj?.profileImage) {
                 try {
@@ -102,9 +44,9 @@ export default function ProfileContent() {
                 }
             }
 
-            // Upload new optimized image
+            // Upload new image
             const imageRef = ref(storage, `profile-images/${currentUser.uid}`)
-            await uploadBytes(imageRef, optimizedFile)
+            await uploadBytes(imageRef, file)
             const downloadURL = await getDownloadURL(imageRef)
 
             // Update Firestore
@@ -171,16 +113,11 @@ export default function ProfileContent() {
                 {/* Level Bar */}
                 <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                        <span>Niveau {userDataObj?.level || 1}</span>
-                        <span>{userDataObj?.xp || 0}/{XP_PER_LEVEL} xp</span>
+                        <span>Niveau 2</span>
+                        <span>20/100 xp</span>
                     </div>
                     <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-black transition-all duration-500" 
-                            style={{ 
-                                width: `${((userDataObj?.xp || 0) % XP_PER_LEVEL) / XP_PER_LEVEL * 100}%` 
-                            }}
-                        ></div>
+                        <div className="h-full bg-black" style={{ width: '20%' }}></div>
                     </div>
                 </div>
 

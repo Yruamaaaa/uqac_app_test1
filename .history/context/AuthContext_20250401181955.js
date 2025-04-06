@@ -56,8 +56,6 @@ export function AuthProvider({ children }) {
                 age: userData?.age || null,
                 hobby: userData?.hobby || '',
                 profileImage: profileImageUrl,
-                xp: 0,  // Initial XP
-                level: 1,  // Initial level
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             }
@@ -116,38 +114,11 @@ export function AuthProvider({ children }) {
                     setCurrentUser(user)
                     // if user exists, fetch data from firestore database
                     const docRef = doc(db, 'users', user.uid)
-                    try {
-                        const docSnap = await getDoc(docRef)
-                        if (docSnap.exists()) {
-                            setUserDataObj(docSnap.data())
-                        } else {
-                            // If document doesn't exist, create it with basic data
-                            const userDoc = {
-                                email: user.email,
-                                name: '',
-                                age: null,
-                                hobby: '',
-                                profileImage: null,
-                                xp: 0,  // Initial XP
-                                level: 1,  // Initial level
-                                createdAt: new Date().toISOString(),
-                                updatedAt: new Date().toISOString()
-                            }
-                            await setDoc(docRef, userDoc)
-                            setUserDataObj(userDoc)
-                        }
-                    } catch (firestoreError) {
-                        console.error('Error accessing user document:', firestoreError)
-                        // Set empty user data if there's an error
-                        setUserDataObj({
-                            email: user.email,
-                            name: '',
-                            age: null,
-                            hobby: '',
-                            profileImage: null,
-                            xp: 0,  // Initial XP
-                            level: 1,  // Initial level
-                        })
+                    const docSnap = await getDoc(docRef)
+                    if (docSnap.exists()) {
+                        setUserDataObj(docSnap.data())
+                    } else {
+                        setUserDataObj({})
                     }
                 }
             } catch (err) {

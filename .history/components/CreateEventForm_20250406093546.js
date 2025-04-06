@@ -125,24 +125,19 @@ export default function CreateEventForm() {
             }
 
             // Create event document
+            const eventRef = doc(collection(db, 'events'))
             const eventData = {
-                title: formData.title,
-                description: formData.description,
-                sportType: formData.sportType,
-                location: formData.location,
-                date: formData.date,
-                startHour: formData.startHour,
-                duration: formData.duration,
-                maxParticipants: formData.maxParticipants,
+                ...formData,
                 authorId: currentUser.uid,
                 authorName: userDataObj?.name || 'Anonymous',
-                imageUrl,
-                participants: [],
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                participants: [],
+                status: 'active',
+                imageUrl
             }
 
-            const docRef = await addDoc(collection(db, 'events'), eventData)
+            await setDoc(eventRef, eventData)
 
             // Award XP for creating an event
             await addXP(currentUser.uid, XP_REWARD_EVENT)
