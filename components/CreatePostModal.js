@@ -6,6 +6,7 @@ import { collection, addDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import Image from 'next/image'
 import { addXP, XP_REWARD_EVENT } from '@/utils/gamification'
+import { validateFormContent } from '@/utils/contentModeration'
 
 export default function CreatePostModal({ isOpen, onClose }) {
     const { currentUser, userDataObj } = useAuth()
@@ -37,6 +38,17 @@ export default function CreatePostModal({ isOpen, onClose }) {
         try {
             setIsSubmitting(true)
             setError('')
+
+            // Validate content
+            const contentValidation = validateFormContent({
+                description
+            })
+            
+            if (!contentValidation.isValid) {
+                setError('Le contenu contient des mots inappropriés')
+                setIsSubmitting(false)
+                return
+            }
 
             // Upload image if selected
             let imageUrl = null

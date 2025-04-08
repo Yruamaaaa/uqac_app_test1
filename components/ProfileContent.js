@@ -8,16 +8,83 @@ import { db, storage } from '@/firebase'
 import { doc, updateDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { calculateLevel, calculateXPProgress, XP_PER_LEVEL } from '@/utils/gamification'
+import UserActivitiesModal from './UserActivitiesModal'
+import RegisteredEventsModal from './RegisteredEventsModal'
+import UserPostsModal from './UserPostsModal'
+import FriendsModal from './FriendsModal'
 
 const fugaz = Fugaz_One({
     weight: '400',
     subsets: ['latin'],
 })
 
+const ACTIVITIES = [
+    // Sports
+    { value: 'football', label: 'Football' },
+    { value: 'basketball', label: 'Basketball' },
+    { value: 'tennis', label: 'Tennis' },
+    { value: 'volleyball', label: 'Volleyball' },
+    { value: 'badminton', label: 'Badminton' },
+    { value: 'table-tennis', label: 'Table Tennis' },
+    { value: 'running', label: 'Running' },
+    { value: 'swimming', label: 'Swimming' },
+    { value: 'cycling', label: 'Cycling' },
+    { value: 'hiking', label: 'Hiking' },
+    { value: 'rock-climbing', label: 'Rock Climbing' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'gym', label: 'Gym' },
+    { value: 'martial-arts', label: 'Martial Arts' },
+    { value: 'golf', label: 'Golf' },
+    { value: 'skateboarding', label: 'Skateboarding' },
+    { value: 'surfing', label: 'Surfing' },
+    { value: 'skiing', label: 'Skiing' },
+    { value: 'snowboarding', label: 'Snowboarding' },
+    // Social Activities
+    { value: 'eating-out', label: 'Eating Out' },
+    { value: 'coffee', label: 'Coffee' },
+    { value: 'movie', label: 'Movie' },
+    { value: 'concert', label: 'Concert' },
+    { value: 'party', label: 'Party' },
+    { value: 'board-games', label: 'Board Games' },
+    { value: 'video-games', label: 'Video Games' },
+    { value: 'karaoke', label: 'Karaoke' },
+    { value: 'dancing', label: 'Dancing' },
+    { value: 'art-exhibition', label: 'Art Exhibition' },
+    { value: 'museum', label: 'Museum' },
+    { value: 'shopping', label: 'Shopping' },
+    // Outdoor Activities
+    { value: 'picnic', label: 'Picnic' },
+    { value: 'camping', label: 'Camping' },
+    { value: 'fishing', label: 'Fishing' },
+    { value: 'kayaking', label: 'Kayaking' },
+    { value: 'paddleboarding', label: 'Paddleboarding' },
+    { value: 'photography', label: 'Photography' },
+    { value: 'bird-watching', label: 'Bird Watching' },
+    { value: 'gardening', label: 'Gardening' },
+    // Learning & Development
+    { value: 'language-exchange', label: 'Language Exchange' },
+    { value: 'book-club', label: 'Book Club' },
+    { value: 'workshop', label: 'Workshop' },
+    { value: 'study-group', label: 'Study Group' },
+    { value: 'cooking-class', label: 'Cooking Class' },
+    { value: 'art-class', label: 'Art Class' },
+    { value: 'music-lesson', label: 'Music Lesson' },
+    // Wellness & Health
+    { value: 'meditation', label: 'Meditation' },
+    { value: 'massage', label: 'Massage' },
+    { value: 'spa', label: 'Spa' },
+    { value: 'wellness-retreat', label: 'Wellness Retreat' },
+    { value: 'nutrition-workshop', label: 'Nutrition Workshop' }
+];
+
 export default function ProfileContent() {
     const { userDataObj, logout, currentUser, setUserDataObj } = useAuth()
     const router = useRouter()
     const [isUpdating, setIsUpdating] = useState(false)
+    const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false)
+    const [isRegisteredEventsModalOpen, setIsRegisteredEventsModalOpen] = useState(false)
+    const [isPostsModalOpen, setIsPostsModalOpen] = useState(false)
+    const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false)
 
     const optimizeImage = async (file) => {
         return new Promise((resolve, reject) => {
@@ -164,7 +231,19 @@ export default function ProfileContent() {
                     <h2 className={`text-2xl ${fugaz.className}`}>{userDataObj?.name || 'Loading...'}</h2>
                     <div className="mt-2 text-gray-600 text-center">
                         <p className="text-sm">{userDataObj?.age ? `${userDataObj.age} years old` : ''}</p>
-                        <p className="text-sm">{userDataObj?.hobby || ''}</p>
+                        <div className="flex flex-wrap justify-center gap-1 mt-1">
+                            {userDataObj?.hobbies?.map(hobby => {
+                                const activity = ACTIVITIES.find(a => a.value === hobby);
+                                return (
+                                    <span 
+                                        key={hobby}
+                                        className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full"
+                                    >
+                                        {activity?.label || hobby}
+                                    </span>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -186,19 +265,36 @@ export default function ProfileContent() {
 
                 {/* Menu Items */}
                 <div className="space-y-4">
-                    <button className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i className="fa-regular fa-bell w-6"></i>
-                        <span className={fugaz.className}>Notifications</span>
+                    <button 
+                        onClick={() => setIsRegisteredEventsModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        <i className="fa-regular fa-calendar-check w-6"></i>
+                        <span className={fugaz.className}>Mes événements inscrits</span>
                     </button>
 
-                    <button className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <button 
+                        onClick={() => setIsActivitiesModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
                         <i className="fa-regular fa-calendar-check w-6"></i>
                         <span className={fugaz.className}>Mes Activités</span>
                     </button>
 
-                    <button className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <button 
+                        onClick={() => setIsPostsModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        <i className="fa-regular fa-newspaper w-6"></i>
+                        <span className={fugaz.className}>Mes Posts</span>
+                    </button>
+
+                    <button 
+                        onClick={() => setIsFriendsModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
                         <i className="fa-regular fa-heart w-6"></i>
-                        <span className={fugaz.className}>Friends</span>
+                        <span className={fugaz.className}>Amis</span>
                     </button>
 
                     <button className="w-full flex items-center justify-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
@@ -215,6 +311,30 @@ export default function ProfileContent() {
                     </button>
                 </div>
             </div>
+
+            {/* Activities Modal */}
+            <UserActivitiesModal 
+                isOpen={isActivitiesModalOpen}
+                onClose={() => setIsActivitiesModalOpen(false)}
+            />
+
+            {/* Registered Events Modal */}
+            <RegisteredEventsModal
+                isOpen={isRegisteredEventsModalOpen}
+                onClose={() => setIsRegisteredEventsModalOpen(false)}
+            />
+
+            {/* Posts Modal */}
+            <UserPostsModal 
+                isOpen={isPostsModalOpen}
+                onClose={() => setIsPostsModalOpen(false)}
+            />
+
+            {/* Friends Modal */}
+            <FriendsModal
+                isOpen={isFriendsModalOpen}
+                onClose={() => setIsFriendsModalOpen(false)}
+            />
         </div>
     )
 } 

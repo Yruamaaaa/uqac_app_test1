@@ -7,6 +7,7 @@ import FindPartnersForm from '@/components/FindPartnersForm'
 import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import Loading from '@/components/Loading'
+import { validateFormContent } from '@/utils/contentModeration'
 
 export default function CreateEventPage() {
     const [activeForm, setActiveForm] = useState('create') // 'create' or 'find'
@@ -25,6 +26,24 @@ export default function CreateEventPage() {
 
     if (!currentUser) {
         return null
+    }
+
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        
+        // Validate content
+        const contentValidation = validateFormContent({
+            title,
+            description,
+            location
+        })
+        
+        if (!contentValidation.isValid) {
+            setErrors(contentValidation.errors)
+            return
+        }
+
+        // ... rest of the existing handleSubmit code ...
     }
 
     return (

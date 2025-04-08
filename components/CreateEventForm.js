@@ -1,16 +1,79 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { db, storage } from '@/firebase'
-import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore'
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { addXP, XP_REWARD_EVENT } from '@/utils/gamification'
+import { validateFormContent } from '@/utils/contentModeration'
+import { sendEventNotifications } from '@/utils/notifications'
+
+const ACTIVITIES = [
+    // Sports
+    { value: 'football', label: 'Football' },
+    { value: 'basketball', label: 'Basketball' },
+    { value: 'tennis', label: 'Tennis' },
+    { value: 'volleyball', label: 'Volleyball' },
+    { value: 'badminton', label: 'Badminton' },
+    { value: 'table-tennis', label: 'Table Tennis' },
+    { value: 'running', label: 'Running' },
+    { value: 'swimming', label: 'Swimming' },
+    { value: 'cycling', label: 'Cycling' },
+    { value: 'hiking', label: 'Hiking' },
+    { value: 'rock-climbing', label: 'Rock Climbing' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'gym', label: 'Gym' },
+    { value: 'martial-arts', label: 'Martial Arts' },
+    { value: 'golf', label: 'Golf' },
+    { value: 'skateboarding', label: 'Skateboarding' },
+    { value: 'surfing', label: 'Surfing' },
+    { value: 'skiing', label: 'Skiing' },
+    { value: 'snowboarding', label: 'Snowboarding' },
+    // Social Activities
+    { value: 'eating-out', label: 'Eating Out' },
+    { value: 'coffee', label: 'Coffee' },
+    { value: 'movie', label: 'Movie' },
+    { value: 'concert', label: 'Concert' },
+    { value: 'party', label: 'Party' },
+    { value: 'board-games', label: 'Board Games' },
+    { value: 'video-games', label: 'Video Games' },
+    { value: 'karaoke', label: 'Karaoke' },
+    { value: 'dancing', label: 'Dancing' },
+    { value: 'art-exhibition', label: 'Art Exhibition' },
+    { value: 'museum', label: 'Museum' },
+    { value: 'shopping', label: 'Shopping' },
+    // Outdoor Activities
+    { value: 'picnic', label: 'Picnic' },
+    { value: 'camping', label: 'Camping' },
+    { value: 'fishing', label: 'Fishing' },
+    { value: 'kayaking', label: 'Kayaking' },
+    { value: 'paddleboarding', label: 'Paddleboarding' },
+    { value: 'photography', label: 'Photography' },
+    { value: 'bird-watching', label: 'Bird Watching' },
+    { value: 'gardening', label: 'Gardening' },
+    // Learning & Development
+    { value: 'language-exchange', label: 'Language Exchange' },
+    { value: 'book-club', label: 'Book Club' },
+    { value: 'workshop', label: 'Workshop' },
+    { value: 'study-group', label: 'Study Group' },
+    { value: 'cooking-class', label: 'Cooking Class' },
+    { value: 'art-class', label: 'Art Class' },
+    { value: 'music-lesson', label: 'Music Lesson' },
+    // Wellness & Health
+    { value: 'meditation', label: 'Meditation' },
+    { value: 'massage', label: 'Massage' },
+    { value: 'spa', label: 'Spa' },
+    { value: 'wellness-retreat', label: 'Wellness Retreat' },
+    { value: 'nutrition-workshop', label: 'Nutrition Workshop' }
+]
 
 export default function CreateEventForm() {
     const { currentUser, userDataObj } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const isEditing = searchParams.get('edit')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [imagePreview, setImagePreview] = useState(null)
@@ -20,15 +83,55 @@ export default function CreateEventForm() {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        date: new Date().toISOString().split('T')[0], // Default to today
+        date: new Date().toISOString().split('T')[0],
         startHour: 8,
         duration: 1,
         maxParticipants: 10,
         location: '',
-        sportType: 'other',
+        activityType: 'football',
         imageUrl: null,
         acceptedTerms: false
     })
+
+    useEffect(() => {
+        if (isEditing && currentUser) {
+            fetchEventData()
+        }
+    }, [isEditing, currentUser])
+
+    const fetchEventData = async () => {
+        try {
+            setLoading(true)
+            const eventDoc = await getDoc(doc(db, 'events', isEditing))
+            if (eventDoc.exists()) {
+                const eventData = eventDoc.data()
+                if (eventData.authorId !== currentUser.uid) {
+                    router.push('/dashboard')
+                    return
+                }
+                setFormData({
+                    title: eventData.title,
+                    description: eventData.description,
+                    date: eventData.date,
+                    startHour: eventData.startHour,
+                    duration: eventData.duration,
+                    maxParticipants: eventData.maxParticipants,
+                    location: eventData.location,
+                    activityType: eventData.activityType,
+                    imageUrl: eventData.imageUrl,
+                    acceptedTerms: true
+                })
+                if (eventData.imageUrl) {
+                    setImagePreview(eventData.imageUrl)
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching event:', error)
+            setError('Failed to load event data')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const handleImageChange = async (e) => {
         const file = e.target.files[0]
@@ -116,19 +219,32 @@ export default function CreateEventForm() {
             setLoading(true)
             setError('')
 
+            // Validate content
+            const contentValidation = validateFormContent({
+                title: formData.title,
+                description: formData.description,
+                location: formData.location
+            })
+            
+            if (!contentValidation.isValid) {
+                setError('Le contenu contient des mots inappropriés')
+                setLoading(false)
+                return
+            }
+
             // Upload image if selected
-            let imageUrl = null
+            let imageUrl = formData.imageUrl
             if (formData.imageFile) {
                 const imageRef = ref(storage, `event-images/${currentUser.uid}/${Date.now()}`)
                 await uploadBytes(imageRef, formData.imageFile)
                 imageUrl = await getDownloadURL(imageRef)
             }
 
-            // Create event document
+            // Create or update event document
             const eventData = {
                 title: formData.title,
                 description: formData.description,
-                sportType: formData.sportType,
+                activityType: formData.activityType,
                 location: formData.location,
                 date: formData.date,
                 startHour: formData.startHour,
@@ -137,15 +253,26 @@ export default function CreateEventForm() {
                 authorId: currentUser.uid,
                 authorName: userDataObj?.name || 'Anonymous',
                 imageUrl,
-                participants: [],
-                createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             }
 
-            const docRef = await addDoc(collection(db, 'events'), eventData)
-
-            // Award XP for creating an event
-            await addXP(currentUser.uid, XP_REWARD_EVENT)
+            if (isEditing) {
+                // Update existing event
+                await setDoc(doc(db, 'events', isEditing), eventData)
+                setSuccess('Event updated successfully!')
+            } else {
+                // Create new event
+                eventData.participants = [currentUser.uid] // Add creator as participant
+                eventData.createdAt = new Date().toISOString()
+                const eventRef = await addDoc(collection(db, 'events'), eventData)
+                eventData.id = eventRef.id // Add the ID to the event data
+                
+                // Send notifications for new events
+                await sendEventNotifications(eventData)
+                
+                await addXP(currentUser.uid, XP_REWARD_EVENT)
+                setSuccess('Event created successfully!')
+            }
 
             // Reset form
             setFormData({
@@ -156,22 +283,20 @@ export default function CreateEventForm() {
                 duration: 1,
                 maxParticipants: 10,
                 location: '',
-                sportType: 'other',
+                activityType: 'football',
                 imageUrl: null,
                 acceptedTerms: false
             })
             setImagePreview(null)
 
-            // Show success message
-            setSuccess('Event created successfully!')
             setTimeout(() => {
                 setSuccess('')
                 router.push('/dashboard')
             }, 2000)
 
         } catch (error) {
-            console.error('Error creating event:', error)
-            setError('Failed to create event. Please try again.')
+            console.error('Error saving event:', error)
+            setError('Failed to save event. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -179,7 +304,9 @@ export default function CreateEventForm() {
 
     return (
         <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-6">Créer un nouvel événement</h2>
+            <h2 className="text-xl font-semibold mb-6">
+                {isEditing ? 'Modifier l\'événement' : 'Créer un nouvel événement'}
+            </h2>
             
             {error && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
@@ -228,6 +355,7 @@ export default function CreateEventForm() {
                     </div>
                 </div>
 
+                {/* Title */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         Titre de l'événement
@@ -243,6 +371,7 @@ export default function CreateEventForm() {
                     />
                 </div>
 
+                {/* Description */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         Description
@@ -258,22 +387,44 @@ export default function CreateEventForm() {
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Date
-                        </label>
-                        <input
-                            type="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleChange}
-                            required
-                            min={new Date().toISOString().split('T')[0]}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
+                {/* Activity Type */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Type d'activité
+                    </label>
+                    <select
+                        name="activityType"
+                        value={formData.activityType}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {ACTIVITIES.map(activity => (
+                            <option key={activity.value} value={activity.value}>
+                                {activity.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
+                {/* Date */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date
+                    </label>
+                    <input
+                        type="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={handleChange}
+                        required
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                </div>
+
+                {/* Time and Duration */}
+                <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Heure de début
@@ -290,9 +441,6 @@ export default function CreateEventForm() {
                             ))}
                         </select>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Durée (heures)
@@ -309,23 +457,9 @@ export default function CreateEventForm() {
                             ))}
                         </select>
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nombre maximum de participants
-                        </label>
-                        <input
-                            type="number"
-                            name="maxParticipants"
-                            value={formData.maxParticipants}
-                            onChange={handleChange}
-                            min="2"
-                            required
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
                 </div>
 
+                {/* Location */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                         Lieu
@@ -337,56 +471,37 @@ export default function CreateEventForm() {
                         onChange={handleChange}
                         required
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ex: Stade municipal"
+                        placeholder="Ex: Parc municipal, Salle de sport..."
                     />
                 </div>
 
+                {/* Max Participants */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Type de sport
+                        Nombre maximum de participants
                     </label>
-                    <select
-                        name="sportType"
-                        value={formData.sportType}
+                    <input
+                        type="number"
+                        name="maxParticipants"
+                        value={formData.maxParticipants}
                         onChange={handleChange}
+                        min="1"
                         required
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="football">Football</option>
-                        <option value="basketball">Basketball</option>
-                        <option value="tennis">Tennis</option>
-                        <option value="badminton">Badminton</option>
-                        <option value="running">Course à pied</option>
-                        <option value="gym">Gym</option>
-                        <option value="other">Autre</option>
-                    </select>
-                </div>
-
-                {/* Terms and Conditions */}
-                <div className="flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        name="acceptedTerms"
-                        checked={formData.acceptedTerms}
-                        onChange={(e) => setFormData({...formData, acceptedTerms: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <label className="text-sm text-gray-600">
-                        En cliquant sur ce bouton, vous acceptez nos conditions d'utilisation
-                    </label>
                 </div>
 
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || !formData.acceptedTerms}
+                    disabled={loading}
                     className={`w-full py-3 rounded-lg font-medium transition-colors ${
-                        formData.acceptedTerms 
-                        ? 'bg-black text-white hover:bg-gray-800' 
-                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        loading
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-black text-white hover:bg-gray-800'
                     }`}
                 >
-                    {loading ? 'Création en cours...' : 'Créer l\'événement'}
+                    {loading ? 'Enregistrement en cours...' : (isEditing ? 'Mettre à jour' : 'Créer l\'événement')}
                 </button>
             </form>
         </div>

@@ -1,9 +1,10 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { db } from '@/firebase'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, updateDoc, doc, arrayUnion, arrayRemove, getDoc } from 'firebase/firestore'
 import { useAuth } from '@/context/AuthContext'
 import Image from 'next/image'
+import ProfilePreviewModal from './ProfilePreviewModal'
 
 // Generate hours from 8am to 10pm
 const hours = Array.from({ length: 15 }, (_, i) => i + 8)
@@ -15,6 +16,8 @@ export default function Calendar() {
     const [loading, setLoading] = useState(true)
     const [selectedEvent, setSelectedEvent] = useState(null)
     const { currentUser } = useAuth()
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+    const [selectedUserId, setSelectedUserId] = useState(null)
 
     // Get current day and calculate week start/end
     const today = new Date()
@@ -32,27 +35,27 @@ export default function Calendar() {
     }
 
     // Fetch events from Firestore
-    useEffect(() => {
-        const fetchEvents = async () => {
-            try {
-                setLoading(true)
-                const eventsRef = collection(db, 'events')
-                const q = query(eventsRef, where('status', '==', 'active'))
-                const querySnapshot = await getDocs(q)
-                
-                const eventsData = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }))
-                
-                setEvents(eventsData)
-            } catch (error) {
-                console.error('Error fetching events:', error)
-            } finally {
-                setLoading(false)
-            }
+    const fetchEvents = async () => {
+        try {
+            setLoading(true)
+            const eventsRef = collection(db, 'events')
+            const q = query(eventsRef)
+            const querySnapshot = await getDocs(q)
+            
+            const eventsData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }))
+            
+            setEvents(eventsData)
+        } catch (error) {
+            console.error('Error fetching events:', error)
+        } finally {
+            setLoading(false)
         }
+    }
 
+    useEffect(() => {
         fetchEvents()
     }, [currentDate]) // Refetch when date changes
 
@@ -108,6 +111,44 @@ export default function Calendar() {
             other: 'bg-gray-100 border-gray-300 text-gray-700'
         }
         return colors[sportType] || colors.other
+    }
+
+    const handleParticipate = async (eventId, isParticipating) => {
+        if (!currentUser) return
+
+        try {
+            const eventRef = doc(db, 'events', eventId)
+            if (isParticipating) {
+                await updateDoc(eventRef, {
+                    participants: arrayRemove(currentUser.uid)
+                })
+            } else {
+                await updateDoc(eventRef, {
+                    participants: arrayUnion(currentUser.uid)
+                })
+            }
+            // Get the updated event data
+            const updatedEventDoc = await getDoc(eventRef)
+            const updatedEvent = {
+                id: updatedEventDoc.id,
+                ...updatedEventDoc.data()
+            }
+            // Update the selected event with the latest data
+            setSelectedEvent(updatedEvent)
+            // Update the events list
+            setEvents(prevEvents => 
+                prevEvents.map(event => 
+                    event.id === eventId ? updatedEvent : event
+                )
+            )
+        } catch (error) {
+            console.error('Error updating participation:', error)
+        }
+    }
+
+    const handleProfileClick = (userId) => {
+        setSelectedUserId(userId)
+        setIsProfileModalOpen(true)
     }
 
     return (
@@ -171,7 +212,7 @@ export default function Calendar() {
                     </>
                 ) : (
                     // Week view
-                    <div className="relative max-h-[calc(100vh-16rem)] overflow-y-auto">
+                    <div className="relative">
                         <div className="flex justify-between items-center mb-4">
                             <button 
                                 onClick={() => navigateDate(-1)}
@@ -193,10 +234,10 @@ export default function Calendar() {
                             </button>
                         </div>
                         {/* Scrollable content */}
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-h-[calc(100vh-16rem)]">
                             <div className="min-w-[500px] sm:min-w-[600px] md:min-w-[800px]">
                                 {/* Week header */}
-                                <div className="grid grid-cols-8 gap-1 mb-2 border-b pb-2 sticky top-0 bg-white z-10">
+                                <div className="grid grid-cols-8 gap-1 mb-2 border-b pb-2 sticky top-0 bg-white z-20">
                                     <div className="w-16"></div> {/* Spacer for hours column */}
                                     {dates.map((date, i) => (
                                         <div 
@@ -217,7 +258,7 @@ export default function Calendar() {
                                     {hours.map(hour => (
                                         <div key={hour} className="grid grid-cols-8 gap-1 border-b last:border-b-0">
                                             {/* Hours column */}
-                                            <div className="w-16 flex items-center justify-end pr-2 text-sm text-gray-500 border-r">
+                                            <div className="w-16 flex items-center justify-end pr-2 text-sm text-gray-500 border-r sticky left-0 bg-white z-10">
                                                 {formatHour(hour)}
                                             </div>
                                             {/* Days columns */}
@@ -232,7 +273,7 @@ export default function Calendar() {
                                                             className={`absolute w-[calc(100%-8px)] left-1 p-1 rounded border ${getEventColor(event.sportType)}`}
                                                             style={{ 
                                                                 height: getEventHeight(event.duration),
-                                                                zIndex: 10
+                                                                zIndex: 1
                                                             }}
                                                             onClick={() => setSelectedEvent(event)}
                                                         >
@@ -263,17 +304,17 @@ export default function Calendar() {
                 {/* Event Details Modal */}
                 {selectedEvent && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-xl font-semibold">{selectedEvent.title}</h3>
+                        <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-semibold">{selectedEvent.title}</h2>
                                 <button 
                                     onClick={() => setSelectedEvent(null)}
                                     className="text-gray-500 hover:text-gray-700"
                                 >
-                                    <i className="fa-solid fa-xmark"></i>
+                                    <i className="fa-solid fa-xmark text-2xl"></i>
                                 </button>
                             </div>
-                            
+
                             {selectedEvent.imageUrl && (
                                 <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden">
                                     <Image
@@ -284,53 +325,61 @@ export default function Calendar() {
                                     />
                                 </div>
                             )}
-                            
-                            <div className="space-y-3">
-                                <div>
-                                    <p className="text-sm text-gray-500">Description</p>
-                                    <p className="text-gray-800">{selectedEvent.description}</p>
+
+                            <div className="space-y-4">
+                                <p className="text-gray-600">{selectedEvent.description}</p>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                        <i className="fa-regular fa-calendar mr-1"></i>
+                                        {new Date(selectedEvent.date).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                        <i className="fa-regular fa-clock mr-1"></i>
+                                        {selectedEvent.startHour}:00
+                                    </span>
+                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                        <i className="fa-solid fa-location-dot mr-1"></i>
+                                        {selectedEvent.location}
+                                    </span>
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-500">Lieu</p>
-                                        <p className="text-gray-800">{selectedEvent.location}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Type de sport</p>
-                                        <p className="text-gray-800 capitalize">{selectedEvent.sportType}</p>
-                                    </div>
+
+                                <div className="flex justify-between items-center">
+                                    <button
+                                        onClick={() => handleProfileClick(selectedEvent.authorId)}
+                                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+                                    >
+                                        <i className="fa-regular fa-user"></i>
+                                        <span>Created by {selectedEvent.authorName}</span>
+                                    </button>
+
+                                    {currentUser && (
+                                        <button
+                                            onClick={() => handleParticipate(selectedEvent.id, selectedEvent.participants?.includes(currentUser?.uid))}
+                                            className={`px-3 py-1.5 rounded-lg transition-colors ${
+                                                selectedEvent.participants?.includes(currentUser?.uid)
+                                                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    : 'bg-black text-white hover:bg-gray-800'
+                                            }`}
+                                        >
+                                            {selectedEvent.participants?.includes(currentUser?.uid)
+                                                ? 'Cancel Participation'
+                                                : 'Participate'}
+                                        </button>
+                                    )}
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-sm text-gray-500">Participants</p>
-                                        <p className="text-gray-800">{selectedEvent.participants.length}/{selectedEvent.maxParticipants}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">Durée</p>
-                                        <p className="text-gray-800">{selectedEvent.duration} heure{selectedEvent.duration > 1 ? 's' : ''}</p>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <p className="text-sm text-gray-500">Créé par</p>
-                                    <p className="text-gray-800">{selectedEvent.authorName}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-6 flex justify-end">
-                                <button
-                                    onClick={() => setSelectedEvent(null)}
-                                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                                >
-                                    Fermer
-                                </button>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Profile Preview Modal */}
+            <ProfilePreviewModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                userId={selectedUserId}
+            />
         </div>
     )
 }

@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import ProfilePreviewModal from './ProfilePreviewModal'
 
 export default function PartnerSearch() {
     const { currentUser, userDataObj } = useAuth()
@@ -14,6 +15,8 @@ export default function PartnerSearch() {
     const [selectedTime, setSelectedTime] = useState('all')
     const [searchQuery, setSearchQuery] = useState('')
     const router = useRouter()
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+    const [selectedUserId, setSelectedUserId] = useState(null)
 
     useEffect(() => {
         fetchPartners()
@@ -56,6 +59,11 @@ export default function PartnerSearch() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleProfileClick = (userId) => {
+        setSelectedUserId(userId)
+        setIsProfileModalOpen(true)
     }
 
     const sportTypes = [
@@ -156,9 +164,12 @@ export default function PartnerSearch() {
                                         <span className="px-3 py-1 bg-gray-100 rounded-full text-sm capitalize">
                                             {partner.activity}
                                         </span>
-                                        <span className="text-sm text-gray-500">
+                                        <button
+                                            onClick={() => handleProfileClick(partner.authorId)}
+                                            className="text-sm text-gray-500 hover:text-gray-900"
+                                        >
                                             Par {partner.authorName}
-                                        </span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -166,6 +177,13 @@ export default function PartnerSearch() {
                     </div>
                 )}
             </div>
+
+            {/* Profile Preview Modal */}
+            <ProfilePreviewModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                userId={selectedUserId}
+            />
         </div>
     )
 } 

@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Broodl · Dashboard",
+    title: "SHUK",
 };
 
 export default function DashboardLayout({ children }) {

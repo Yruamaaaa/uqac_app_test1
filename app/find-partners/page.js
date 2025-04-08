@@ -2,8 +2,27 @@
 import FindPartnersForm from '@/components/FindPartnersForm'
 import DashboardHeader from '@/components/DashboardHeader'
 import BottomNav from '@/components/BottomNav'
+import { validateFormContent } from '@/utils/contentModeration'
 
 export default function FindPartnersPage() {
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        
+        // Validate content
+        const contentValidation = validateFormContent({
+            activity,
+            description,
+            location
+        })
+        
+        if (!contentValidation.isValid) {
+            setErrors(contentValidation.errors)
+            return
+        }
+
+        // ... rest of the existing handleSubmit code ...
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             <DashboardHeader />

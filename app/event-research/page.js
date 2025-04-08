@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import Loading from '@/components/Loading'
 import PartnerSearch from '@/components/PartnerSearch'
+import ProfilePreviewModal from '@/components/ProfilePreviewModal'
 
 export default function EventResearch() {
     const [events, setEvents] = useState([])
@@ -21,6 +22,9 @@ export default function EventResearch() {
     const [searchQuery, setSearchQuery] = useState('')
     const { currentUser, loading: authLoading } = useAuth()
     const router = useRouter()
+    const [selectedEvent, setSelectedEvent] = useState(null)
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+    const [selectedUserId, setSelectedUserId] = useState(null)
 
     useEffect(() => {
         if (!authLoading && !currentUser) {
@@ -94,6 +98,11 @@ export default function EventResearch() {
         } catch (error) {
             console.error('Error updating participation:', error)
         }
+    }
+
+    const handleProfileClick = (userId) => {
+        setSelectedUserId(userId)
+        setIsProfileModalOpen(true)
     }
 
     const sportTypes = [
@@ -172,57 +181,68 @@ export default function EventResearch() {
                                     const isAuthor = event.authorId === currentUser.uid
                                     return (
                                         <div key={event.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                                            {event.imageUrl && (
-                                                <div className="relative h-48 w-full">
+                                            {/* Event Image */}
+                                            <div className="relative h-48">
+                                                {event.imageUrl ? (
                                                     <Image
                                                         src={event.imageUrl}
                                                         alt={event.title}
                                                         fill
                                                         className="object-cover"
                                                     />
-                                                </div>
-                                            )}
-                                            <div className="p-4">
-                                                <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
-                                                <p className="text-gray-600 mb-2">{event.description}</p>
-                                                <div className="grid grid-cols-2 gap-2 text-sm text-gray-500">
-                                                    <div>
-                                                        <i className="fa-solid fa-location-dot mr-2"></i>
-                                                        {event.location}
+                                                ) : (
+                                                    <div className="w-full h-full bg-gray-100 grid place-items-center">
+                                                        <i className="fa-solid fa-image text-4xl text-gray-400"></i>
                                                     </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-users mr-2"></i>
-                                                        {event.participants?.length || 0}/{event.maxParticipants}
-                                                    </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-clock mr-2"></i>
-                                                        {event.startHour}:00 - {event.startHour + event.duration}:00
-                                                    </div>
-                                                    <div>
-                                                        <i className="fa-solid fa-calendar mr-2"></i>
-                                                        {new Date(event.date).toLocaleDateString('fr-FR')}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-4 flex justify-between items-center">
-                                                    <span className="px-3 py-1 bg-gray-100 rounded-full text-sm capitalize">
-                                                        {event.sportType}
-                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Event Content */}
+                                            <div className="p-6 space-y-4">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className="text-xl font-semibold">{event.title}</h3>
                                                     <span className="text-sm text-gray-500">
-                                                        Par {event.authorName}
+                                                        {event.participants?.length || 0}/{event.maxParticipants} participants
                                                     </span>
                                                 </div>
-                                                {!isAuthor && (
+
+                                                <p className="text-gray-600">{event.description}</p>
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                                        <i className="fa-regular fa-calendar mr-1"></i>
+                                                        {new Date(event.date).toLocaleDateString()}
+                                                    </span>
+                                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                                        <i className="fa-regular fa-clock mr-1"></i>
+                                                        {event.startHour}:00
+                                                    </span>
+                                                    <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                                        <i className="fa-solid fa-location-dot mr-1"></i>
+                                                        {event.location}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center gap-4">
+                                                    <button
+                                                        onClick={() => handleProfileClick(event.authorId)}
+                                                        className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+                                                    >
+                                                        <i className="fa-regular fa-user"></i>
+                                                        <span>Created by {event.authorName}</span>
+                                                    </button>
+
                                                     <button
                                                         onClick={() => handleParticipate(event.id, isParticipating)}
-                                                        className={`w-full mt-4 py-2 rounded-lg font-medium transition-colors ${
+                                                        className={`px-2.5 py-1 text-sm rounded-lg transition-colors ${
                                                             isParticipating
                                                                 ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                                : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                : 'bg-black text-white hover:bg-gray-800'
                                                         }`}
                                                     >
-                                                        {isParticipating ? 'Annuler ma participation' : 'Participer'}
+                                                        {isParticipating ? 'Cancel Participation' : 'Participate'}
                                                     </button>
-                                                )}
+                                                </div>
                                             </div>
                                         </div>
                                     )
@@ -237,6 +257,13 @@ export default function EventResearch() {
             </div>
 
             <BottomNav />
+
+            {/* Profile Preview Modal */}
+            <ProfilePreviewModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                userId={selectedUserId}
+            />
         </div>
     )
 } 

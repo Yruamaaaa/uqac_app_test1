@@ -1,14 +1,17 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { db } from '@/firebase'
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { useRouter } from 'next/navigation'
+import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { addXP, XP_REWARD_PARTNER } from '@/utils/gamification'
+import { validateFormContent } from '@/utils/contentModeration'
 
 export default function FindPartnersForm() {
     const { currentUser, userDataObj } = useAuth()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const isEditing = searchParams.get('edit')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
@@ -16,11 +19,44 @@ export default function FindPartnersForm() {
     const [formData, setFormData] = useState({
         activity: '',
         skillLevel: 'intermediate',
-        date: new Date().toISOString().split('T')[0], // Default to today
+        date: new Date().toISOString().split('T')[0],
         timePreference: 'any',
         location: '',
         acceptedTerms: false
     })
+
+    useEffect(() => {
+        if (isEditing && currentUser) {
+            fetchPartnerRequest()
+        }
+    }, [isEditing, currentUser])
+
+    const fetchPartnerRequest = async () => {
+        try {
+            setLoading(true)
+            const requestDoc = await getDoc(doc(db, 'findpartners', isEditing))
+            if (requestDoc.exists()) {
+                const requestData = requestDoc.data()
+                if (requestData.authorId !== currentUser.uid) {
+                    router.push('/dashboard')
+                    return
+                }
+                setFormData({
+                    activity: requestData.activity,
+                    skillLevel: requestData.skillLevel,
+                    date: requestData.date,
+                    timePreference: requestData.timePreference,
+                    location: requestData.location,
+                    acceptedTerms: true
+                })
+            }
+        } catch (error) {
+            console.error('Error fetching partner request:', error)
+            setError('Failed to load partner request data')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -42,6 +78,17 @@ export default function FindPartnersForm() {
             return
         }
 
+        // Validate content
+        const contentValidation = validateFormContent({
+            activity: formData.activity,
+            location: formData.location
+        })
+        
+        if (!contentValidation.isValid) {
+            setError('Le contenu contient des mots inappropriés')
+            return
+        }
+
         setLoading(true)
         setError('')
 
@@ -50,20 +97,23 @@ export default function FindPartnersForm() {
                 ...formData,
                 authorId: currentUser.uid,
                 authorName: userDataObj?.name || 'Anonymous',
-                createdAt: serverTimestamp(),
-                status: 'active',
-                interestedUsers: []
+                updatedAt: serverTimestamp(),
+                status: 'active'
             }
 
-            const docRef = await addDoc(collection(db, 'findpartners'), partnerRequest)
-            console.log('Partner request created with ID:', docRef.id)
-            
-            // Award XP for creating a partner request
-            await addXP(currentUser.uid, XP_REWARD_PARTNER)
-            
-            // Show success message
-            setSuccess('Demande de partenaire créée avec succès!')
-            
+            if (isEditing) {
+                // Update existing request
+                await updateDoc(doc(db, 'findpartners', isEditing), partnerRequest)
+                setSuccess('Demande de partenaire mise à jour avec succès!')
+            } else {
+                // Create new request
+                partnerRequest.createdAt = serverTimestamp()
+                partnerRequest.interestedUsers = []
+                await addDoc(collection(db, 'findpartners'), partnerRequest)
+                await addXP(currentUser.uid, XP_REWARD_PARTNER)
+                setSuccess('Demande de partenaire créée avec succès!')
+            }
+
             // Reset form
             setFormData({
                 activity: '',
@@ -79,7 +129,7 @@ export default function FindPartnersForm() {
                 router.push('/event-research')
             }, 2000)
         } catch (err) {
-            console.error('Error creating partner request:', err)
+            console.error('Error saving partner request:', err)
             setError(err.message)
         } finally {
             setLoading(false)
@@ -101,7 +151,9 @@ export default function FindPartnersForm() {
 
     return (
         <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold mb-6">Trouver un partenaire</h2>
+            <h2 className="text-xl font-semibold mb-6">
+                {isEditing ? 'Modifier la recherche de partenaire' : 'Trouver un partenaire'}
+            </h2>
 
             {error && (
                 <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">

@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
                 email: user.email,
                 name: userData?.name || '',
                 age: userData?.age || null,
-                hobby: userData?.hobby || '',
+                hobbies: userData?.hobbies || [],
                 profileImage: profileImageUrl,
                 xp: 0,  // Initial XP
                 level: 1,  // Initial level
@@ -126,7 +126,7 @@ export function AuthProvider({ children }) {
                                 email: user.email,
                                 name: '',
                                 age: null,
-                                hobby: '',
+                                hobbies: [],
                                 profileImage: null,
                                 xp: 0,  // Initial XP
                                 level: 1,  // Initial level
@@ -143,7 +143,7 @@ export function AuthProvider({ children }) {
                             email: user.email,
                             name: '',
                             age: null,
-                            hobby: '',
+                            hobbies: [],
                             profileImage: null,
                             xp: 0,  // Initial XP
                             level: 1,  // Initial level
